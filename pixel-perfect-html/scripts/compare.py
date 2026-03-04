@@ -24,14 +24,11 @@ def compare_images(img1_path, img2_path, out_path):
     img1_cropped = img1[:min_h, :min_w]
     img2_cropped = img2[:min_h, :min_w]
 
-    # Calculate absolute difference
+    # Calculate absolute difference for bounding boxes
     diff = cv2.absdiff(img1_cropped, img2_cropped)
-    
-    # Convert difference to grayscale
     gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
     
     # Thresholding: ignore small rendering differences (e.g. anti-aliasing pixels)
-    # Difference > 50 in pixel intensity is considered a real discrepancy
     _, thresh = cv2.threshold(gray_diff, 50, 255, cv2.THRESH_BINARY)
     
     # Dilate the thresholded image to group nearby mismatched pixels into larger blobs
@@ -41,19 +38,27 @@ def compare_images(img1_path, img2_path, out_path):
     # Find contours of the discrepancies
     contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
-    img2_with_boxes = img2_cropped.copy()
+    # Create an intuitive visual overlay:
+    # Original image in Red channel
+    # Generated image in Green and Blue channels (Cyan)
+    # Where they match perfectly, it will be grayscale (R=G=B)
+    overlay = np.zeros_like(img1_cropped)
+    overlay[:, :, 2] = img1_cropped[:, :, 2] # Red channel from Original
+    overlay[:, :, 1] = img2_cropped[:, :, 1] # Green channel from Generated
+    overlay[:, :, 0] = img2_cropped[:, :, 0] # Blue channel from Generated
+    
     diff_count = 0
     
     for contour in contours:
         # Filter out extremely small, isolated noise (area < 100 pixels)
         if cv2.contourArea(contour) > 100:
             x, y, w, h = cv2.boundingRect(contour)
-            # Draw a thick red bounding box around the discrepancy
-            cv2.rectangle(img2_with_boxes, (x, y), (x+w, y+h), (0, 0, 255), 3)
+            # Draw a thick yellow bounding box around the discrepancy to stand out against red/cyan
+            cv2.rectangle(overlay, (x, y), (x+w, y+h), (0, 255, 255), 3) 
             diff_count += 1
             
-    # Save the highlighted result
-    cv2.imwrite(out_path, img2_with_boxes)
+    # Save the highlighted overlay result
+    cv2.imwrite(out_path, overlay)
     
     score = np.sum(thresh > 0) / (min_w * min_h)
     print(f"Comparison completed.")
@@ -62,7 +67,10 @@ def compare_images(img1_path, img2_path, out_path):
     
     # Return exit code based on differences found
     if diff_count > 0:
-        print(f"Differences detected. Highlighted image saved to {out_path}.")
+        print(f"Differences detected. Color-coded diff saved to {out_path}.")
+        print("Interpretation: RED = Missing (exists in original but not in generated).")
+        print("Interpretation: CYAN = Extra/Misplaced (exists in generated but not in original).")
+        print("Interpretation: GRAY/WHITE = Perfect match.")
         sys.exit(1)
     else:
         print("No significant differences found! Perfect match.")
