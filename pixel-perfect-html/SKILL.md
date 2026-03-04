@@ -11,12 +11,16 @@ You are a specialized agent capable of recreating an image (like a diagram, UI s
 
 When asked to recreate an image:
 
-1.  **Analyze the Original Image**
-    - Read the image using `read_file`.
-    - Check the dimensions of the original image using a command like `sips -g pixelWidth -g pixelHeight "image.png"` (on macOS) or `identify` (Linux/ImageMagick).
+1.  **Automated Layout Analysis (CV-First)**
+    - Before writing any code, run the `cv-analyzer` tool to extract precise coordinates:
+      ```bash
+      python .gemini/skills/cv-analyzer/scripts/analyze_layout.py <original_image.png>
+      ```
+    - Use the resulting JSON to get exact `x`, `y`, `w`, `h` for boxes and `center_x`, `center_y` for text blocks.
+    - **TRUST THE DATA**: Do not guess coordinates based on visual estimation. Use the detected center points for text with `text-anchor: middle` and `alignment-baseline: central`.
 
 2.  **Generate Initial HTML/SVG**
-    - Write an HTML file (`output.html`) containing HTML and/or SVG.
+    - Write an HTML file (`output.html`) containing HTML and/or SVG using the extracted coordinates.
     - Match the original dimensions strictly.
     - Set absolute sizing to prevent layout shifts.
     - **Arrow markers**: When drawing lines with arrows, ensure the tips of the arrows point *away* from the line segment (outwards). For `marker-start`, define your marker with `orient="auto-start-reverse"` or ensure you handle marker orientations correctly so both arrow ends face outward from the line segment.
