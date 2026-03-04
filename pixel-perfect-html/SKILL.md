@@ -19,6 +19,7 @@ When asked to recreate an image:
     - Write an HTML file (`output.html`) containing HTML and/or SVG.
     - Match the original dimensions strictly.
     - Set absolute sizing to prevent layout shifts.
+    - **Arrow markers**: When drawing lines with arrows, ensure the tips of the arrows point *away* from the line segment (outwards). For `marker-start`, define your marker with `orient="auto-start-reverse"` or ensure you handle marker orientations correctly so both arrow ends face outward from the line segment.
 
 3.  **Render the HTML**
     - Use Google Chrome in headless mode to take a screenshot of your generated HTML file.
